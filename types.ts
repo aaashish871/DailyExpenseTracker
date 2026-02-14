@@ -47,6 +47,7 @@ export interface EMI {
   tenure: number;
   paidMonths: number;
   startDate: string;
+  paidAmounts?: number[]; // To store individual installment amounts
 }
 
 export interface Transaction {
