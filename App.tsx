@@ -186,13 +186,12 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && <Dashboard state={state} addTransaction={addTransaction} setActiveTab={setActiveTab} totals={{ barna: totalBarnaHai, lena: totalLenaHai, pass: totalMerePass, income: totalIncome }} />}
           {activeTab === 'accounts' && <Wallets accounts={state.accounts} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} />}
           {activeTab === 'cards' && <CreditCards accounts={state.accounts} emis={state.emis} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
-          {activeTab === 'emis' && <EMIPlanner accounts={state.accounts} emis={state.emis} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
+          {activeTab === 'emis' && <EMIPlanner accounts={state.accounts} emis={state.emis} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
           {activeTab === 'transactions' && <Transactions transactions={state.transactions} accounts={state.accounts} addTransaction={addTransaction} />}
           {activeTab === 'debts' && <Debts debts={state.debts} addDebt={(d) => {}} settleDebt={(id) => {}} />}
         </div>
       </main>
       
-      {/* Mobile Nav update */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around p-3 md:hidden z-50 overflow-x-auto">
         <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] ${activeTab === 'dashboard' ? 'text-rose-600 bg-rose-50' : 'text-slate-400'}`}>
           <LayoutDashboard size={20} />
