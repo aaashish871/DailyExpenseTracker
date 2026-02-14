@@ -186,7 +186,7 @@ const App: React.FC = () => {
           {activeTab === 'dashboard' && <Dashboard state={state} addTransaction={addTransaction} setActiveTab={setActiveTab} totals={{ barna: totalBarnaHai, lena: totalLenaHai, pass: totalMerePass, income: totalIncome }} />}
           {activeTab === 'accounts' && <Wallets accounts={state.accounts} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} />}
           {activeTab === 'cards' && <CreditCards accounts={state.accounts} emis={state.emis} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
-          {activeTab === 'emis' && <EMIPlanner accounts={state.accounts} emis={state.emis} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
+          {activeTab === 'emis' && <EMIPlanner accounts={state.accounts} emis={state.emis} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} addTransaction={addTransaction} />}
           {activeTab === 'transactions' && <Transactions transactions={state.transactions} accounts={state.accounts} addTransaction={addTransaction} />}
           {activeTab === 'debts' && <Debts debts={state.debts} addDebt={(d) => {}} settleDebt={(id) => {}} />}
         </div>

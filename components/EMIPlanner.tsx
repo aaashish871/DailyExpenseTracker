@@ -11,11 +11,13 @@ import {
   AlertCircle,
   Plus,
   X,
-  Edit3,
+  Edit2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  History,
+  IndianRupee
 } from 'lucide-react';
-import { Account, EMI } from '../types.ts';
+import { Account, EMI, TransactionType } from '../types.ts';
 
 interface EMIPlannerProps {
   accounts: Account[];
@@ -23,12 +25,15 @@ interface EMIPlannerProps {
   addEMI: (emi: Omit<EMI, 'id'>) => void;
   updateEMI: (id: string, updates: Partial<EMI>) => void;
   deleteEMI: (id: string) => void;
+  addTransaction: (tx: any) => void;
 }
 
-const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateEMI, deleteEMI }) => {
+const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateEMI, deleteEMI, addTransaction }) => {
   const [showModal, setShowModal] = useState(false);
   const [editingInstallment, setEditingInstallment] = useState<{emiId: string, index: number} | null>(null);
+  const [editingFee, setEditingFee] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
+  const [postToLogs, setPostToLogs] = useState(true);
   
   const [emiForm, setEmiForm] = useState({ 
     accountId: '', 
@@ -42,8 +47,8 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
   });
 
   const activeEmis = emis.filter(emi => {
-    const paidSum = (emi.paidAmounts || []).filter(a => a > 0).length;
-    return paidSum < emi.tenure;
+    const paidCount = (emi.paidAmounts || []).filter(a => a > 0).length;
+    return paidCount < emi.tenure;
   });
 
   const totalMonthly = activeEmis.reduce((sum, e) => sum + e.monthlyAmount, 0);
@@ -52,8 +57,6 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
     const paidSum = (e.paidAmounts || []).reduce((s, a) => s + a, 0);
     return sum + (e.totalAmount - paidSum);
   }, 0);
-
-  const creditCardAccounts = accounts.filter(acc => acc.isLiability);
 
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
@@ -66,8 +69,10 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
     const emi = emis.find(e => e.id === emiId);
     if (!emi) return;
 
+    const amount = parseFloat(editAmount || '0');
     const newPaidAmounts = [...(emi.paidAmounts || Array(emi.tenure).fill(0))];
-    newPaidAmounts[index] = parseFloat(editAmount || '0');
+    const prevAmount = newPaidAmounts[index];
+    newPaidAmounts[index] = amount;
     
     const paidMonthsCount = newPaidAmounts.filter(a => a > 0).length;
     
@@ -75,6 +80,17 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
       paidAmounts: newPaidAmounts,
       paidMonths: paidMonthsCount
     });
+
+    if (postToLogs && amount > 0 && amount !== prevAmount) {
+      addTransaction({
+        amount: amount,
+        description: `EMI ${index + 1}: ${emi.itemName}`,
+        category: 'Others',
+        accountId: emi.accountId,
+        type: TransactionType.EXPENSE,
+        date: new Date().toISOString().split('T')[0]
+      });
+    }
     
     setEditingInstallment(null);
     setEditAmount('');
@@ -91,7 +107,6 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
     const initialPaidAmounts = Array(tenureNum).fill(0);
     const paidMonthsNum = parseInt(emiForm.paid || '0');
     
-    // Pre-fill already paid months with the estimated monthly amount
     for(let i=0; i<paidMonthsNum; i++) {
       initialPaidAmounts[i] = parseFloat(emiForm.monthly);
     }
@@ -168,7 +183,6 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
 
             return (
               <div key={emi.id} className="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden ring-1 ring-slate-100 animate-in slide-in-from-bottom-4">
-                {/* Excel Style Header */}
                 <div className="bg-yellow-400 px-8 py-4 border-b border-yellow-500 flex justify-between items-center">
                    <h4 className="text-lg font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
                       <Landmark size={20} />
@@ -180,70 +194,34 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12">
-                   {/* Left Column: Summary (Matches Excel Rows) */}
                    <div className="lg:col-span-4 border-r border-slate-100 bg-slate-50/50">
                       <div className="divide-y divide-slate-100">
                          <div className="grid grid-cols-2 px-8 py-5">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount Received</span>
-                            <span className="text-right font-black text-slate-900">₹{emi.totalAmount.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Principal</span>
+                            <span className="text-sm font-black text-slate-900 text-right">₹{emi.totalAmount.toLocaleString()}</span>
                          </div>
                          <div className="grid grid-cols-2 px-8 py-5">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Processing Fee</span>
-                            <span className="text-right font-black text-slate-900">₹{emi.processingFee.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Paid</span>
+                            <span className="text-sm font-black text-emerald-600 text-right">₹{currentTotalPaid.toLocaleString()}</span>
                          </div>
-                         <div className="px-8 py-10 bg-indigo-50/50">
-                            <div className="flex justify-between items-end mb-4">
-                               <div className="space-y-1">
-                                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Remaining Principal</span>
-                                  <div className="text-3xl font-black text-indigo-900 tracking-tighter">₹{remainingPrincipal.toLocaleString()}</div>
-                               </div>
-                               <div className="text-right">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progress</span>
-                                  <div className="text-lg font-black text-slate-900">{emi.paidMonths} / {emi.tenure}</div>
-                               </div>
-                            </div>
-                            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                               <div 
-                                  className="bg-indigo-600 h-full transition-all duration-700" 
-                                  style={{ width: `${(emi.paidMonths / emi.tenure) * 100}%` }}
-                               />
-                            </div>
-                         </div>
-                         <div className="grid grid-cols-2 px-8 py-6 bg-yellow-400/20 border-t-2 border-yellow-400">
-                            <span className="text-sm font-black text-slate-900 uppercase tracking-widest italic underline">Total Outflow</span>
-                            <span className="text-right text-xl font-black text-slate-900">₹{currentTotalPaid.toLocaleString()}</span>
+                         <div className="grid grid-cols-2 px-8 py-5 bg-yellow-50">
+                            <span className="text-[10px] font-black text-yellow-700 uppercase tracking-widest">Remaining</span>
+                            <span className="text-sm font-black text-yellow-900 text-right">₹{remainingPrincipal.toLocaleString()}</span>
                          </div>
                       </div>
                    </div>
 
-                   {/* Right Column: Monthly Grid (The actual logging area) */}
                    <div className="lg:col-span-8 p-8">
-                      <div className="flex items-center gap-2 mb-6">
-                         <CalendarDays size={18} className="text-slate-400" />
-                         <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Installment Log (Click to Edit)</h5>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                         {paidAmounts.map((amt, idx) => (
-                          <button 
-                            key={idx} 
-                            onClick={() => { setEditingInstallment({emiId: emi.id, index: idx}); setEditAmount(amt > 0 ? amt.toString() : ''); }}
-                            className={`flex flex-col p-4 rounded-2xl border transition-all text-left group ${
-                              amt > 0 
-                              ? 'bg-emerald-50 border-emerald-100 hover:border-emerald-300' 
-                              : 'bg-white border-slate-100 hover:border-slate-300'
-                            }`}
-                          >
-                            <span className={`text-[10px] font-black uppercase tracking-widest mb-1 ${amt > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              EMI {idx + 1}
-                            </span>
-                            <div className="flex items-center justify-between">
-                               <span className={`text-sm font-black ${amt > 0 ? 'text-emerald-900' : 'text-slate-300'}`}>
-                                 {amt > 0 ? `₹${amt.toLocaleString()}` : '---'}
-                               </span>
-                               <Edit3 size={12} className="text-slate-200 group-hover:text-slate-400" />
-                            </div>
-                          </button>
+                           <button 
+                             key={idx}
+                             onClick={() => { setEditingInstallment({emiId: emi.id, index: idx}); setEditAmount(amt.toString()); }}
+                             className={`p-3 rounded-xl border text-center transition-all ${amt > 0 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-300'}`}
+                           >
+                             <div className="text-[8px] font-black uppercase tracking-tighter mb-0.5">Month {idx + 1}</div>
+                             <div className="text-[10px] font-bold">₹{amt > 0 ? amt.toLocaleString() : '0'}</div>
+                           </button>
                         ))}
                       </div>
                    </div>
@@ -254,125 +232,80 @@ const EMIPlanner: React.FC<EMIPlannerProps> = ({ accounts, emis, addEMI, updateE
         </div>
       )}
 
-      {/* Manual Installment Amount Modal */}
-      {editingInstallment && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-sm p-10 shadow-2xl animate-in zoom-in duration-200">
-             <div className="flex items-center justify-between mb-6">
-                <h4 className="text-xl font-black text-slate-900 tracking-tight">Log EMI {editingInstallment.index + 1}</h4>
-                <button onClick={() => setEditingInstallment(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
-             </div>
-             <div className="space-y-6">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Enter Exact Amount Paid</label>
-                   <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">₹</span>
-                      <input 
-                        type="number" 
-                        autoFocus
-                        value={editAmount}
-                        onChange={(e) => setEditAmount(e.target.value)}
-                        className="w-full pl-10 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl text-2xl font-black text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                        placeholder="0.00"
-                      />
-                   </div>
-                </div>
-                <div className="flex flex-col gap-3">
-                   <button 
-                     onClick={handleInstallmentUpdate}
-                     className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all"
-                   >
-                     Update Monthly Log
-                   </button>
-                   <button 
-                     onClick={() => { setEditAmount('0'); handleInstallmentUpdate(); }}
-                     className="w-full text-slate-400 py-3 font-bold text-xs uppercase tracking-widest hover:text-rose-500"
-                   >
-                     Clear Entry
-                   </button>
-                </div>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Setup Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-indigo-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-2xl p-8 md:p-10 shadow-2xl animate-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] w-full max-w-2xl p-10 shadow-2xl animate-in zoom-in duration-200">
             <div className="flex items-center justify-between mb-8">
-              <div>
-                <h4 className="text-2xl font-black text-slate-900">Setup New Installment</h4>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Spreadsheet Sync</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={24} />
-              </button>
+              <h4 className="text-2xl font-black text-slate-900">New EMI Plan</h4>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
             </div>
-            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Card / Bank Source</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Card / Account</label>
                   <select 
                     value={emiForm.accountId} 
-                    onChange={(e) => setEmiForm({...emiForm, accountId: e.target.value})}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:ring-2 focus:ring-indigo-600 focus:outline-none appearance-none cursor-pointer"
+                    onChange={(e) => setEmiForm({...emiForm, accountId: e.target.value})} 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold"
                     required
                   >
                     <option value="">Select Account</option>
-                    {creditCardAccounts.map(acc => (
+                    {accounts.filter(a => a.isLiability).map(acc => (
                       <option key={acc.id} value={acc.id}>{acc.name} {acc.lastFourDigits ? `(${acc.lastFourDigits})` : ''}</option>
                     ))}
                   </select>
                 </div>
-                
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Item (e.g. iPhone, TV)</label>
-                  <input type="text" value={emiForm.itemName} onChange={(e) => setEmiForm({...emiForm, itemName: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" required />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Item Description</label>
+                  <input type="text" value={emiForm.itemName} onChange={(e) => setEmiForm({...emiForm, itemName: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" placeholder="iPhone 15 Pro, Amazon..." required />
                 </div>
-                
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Received Amount</label>
-                  <input type="number" value={emiForm.total} onChange={(e) => setEmiForm({...emiForm, total: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-lg" required />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Principal (₹)</label>
+                  <input type="number" value={emiForm.total} onChange={(e) => setEmiForm({...emiForm, total: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black" required />
                 </div>
-                
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Est. Monthly EMI</label>
-                  <input type="number" value={emiForm.monthly} onChange={(e) => setEmiForm({...emiForm, monthly: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-lg" required />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monthly EMI (₹)</label>
+                  <input type="number" value={emiForm.monthly} onChange={(e) => setEmiForm({...emiForm, monthly: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black" required />
                 </div>
-                
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Processing Fee</label>
-                  <input type="number" value={emiForm.fee} onChange={(e) => setEmiForm({...emiForm, fee: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" />
-                </div>
-                
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tenure (Months)</label>
                   <input type="number" value={emiForm.tenure} onChange={(e) => setEmiForm({...emiForm, tenure: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" required />
                 </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Already Paid (Months)</label>
+                   <input type="number" value={emiForm.paid} onChange={(e) => setEmiForm({...emiForm, paid: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" />
+                </div>
               </div>
-              
-              <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all active:scale-[0.98] mt-4">
-                Initialize EMI Record
-              </button>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-[28px] font-black text-sm uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all mt-4">Setup EMI Plan</button>
             </form>
           </div>
         </div>
       )}
-
-      {/* Helpful Info */}
-      <div className="bg-amber-50 border border-amber-100 p-8 rounded-[32px] flex items-start gap-4">
-        <AlertCircle className="text-amber-600 mt-1 shrink-0" />
-        <div>
-          <h4 className="font-black text-amber-900 uppercase text-xs tracking-widest mb-2">Manual Tracker Instructions</h4>
-          <p className="text-amber-800/70 text-sm leading-relaxed font-medium">
-            Yeh section aapke Excel logic ko follow karta hai. 
-            Jab aap bank se payment karein, bas us EMI number (e.g. EMI 1) par click karke actual paid amount enter kar dein. 
-            "Total Outflow" mein automatically Processing Fee aur installments add ho jayenge.
-          </p>
+      
+      {editingInstallment && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl">
+            <h4 className="text-xl font-black text-slate-900 mb-6">Update Month {editingInstallment.index + 1}</h4>
+            <div className="space-y-4">
+              <input 
+                type="number" 
+                value={editAmount} 
+                onChange={(e) => setEditAmount(e.target.value)} 
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-xl"
+                placeholder="0.00"
+              />
+              <div className="flex items-center gap-2 px-1">
+                <input type="checkbox" id="postLogs" checked={postToLogs} onChange={(e) => setPostToLogs(e.target.checked)} className="rounded" />
+                <label htmlFor="postLogs" className="text-xs font-bold text-slate-500">Post to Kharch Logs</label>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => setEditingInstallment(null)} className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-500 font-black uppercase text-xs tracking-widest">Cancel</button>
+                <button onClick={handleInstallmentUpdate} className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-black uppercase text-xs tracking-widest">Update</button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
