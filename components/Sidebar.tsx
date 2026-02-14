@@ -13,12 +13,13 @@ import {
   Code2,
   ShieldCheck,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  CalendarDays
 } from 'lucide-react';
 import { User } from '../types.ts';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'accounts' | 'cards' | 'transactions' | 'debts' | 'insights' | 'prompt';
+  activeTab: 'dashboard' | 'accounts' | 'cards' | 'transactions' | 'debts' | 'insights' | 'prompt' | 'emis';
   setActiveTab: (tab: any) => void;
   onReset?: () => void;
   user: User;
@@ -49,6 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
 
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'emis', label: 'EMI Planner', icon: CalendarDays },
     { id: 'cards', label: 'My Cards', icon: CreditCard },
     { id: 'transactions', label: 'Kharch Logs', icon: History },
     { id: 'debts', label: 'Lena / Dena', icon: Users },

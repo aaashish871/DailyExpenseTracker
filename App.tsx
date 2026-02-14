@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   Code2,
   LogOut,
-  Loader2
+  Loader2,
+  CalendarDays
 } from 'lucide-react';
 import { AppState, Account, Transaction, Debt, EMI, AccountType, TransactionType, DebtType, User } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -30,6 +31,7 @@ import Sidebar from './components/Sidebar.tsx';
 import FinancialInsights from './components/FinancialInsights.tsx';
 import PromptView from './components/PromptView.tsx';
 import CreditCards from './components/CreditCards.tsx';
+import EMIPlanner from './components/EMIPlanner.tsx';
 import Login from './components/Login.tsx';
 import { supabase } from './services/supabaseClient.ts';
 
@@ -51,7 +53,7 @@ const App: React.FC = () => {
     }
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'accounts' | 'cards' | 'transactions' | 'debts' | 'insights' | 'prompt'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'accounts' | 'cards' | 'transactions' | 'debts' | 'insights' | 'prompt' | 'emis'>('dashboard');
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -144,6 +146,12 @@ const App: React.FC = () => {
     return cardBalances + emiOutstanding;
   }, [state.accounts, state.emis]);
 
+  const totalMonthlyEMI = useMemo(() => {
+    return state.emis
+      .filter(emi => emi.paidMonths < emi.tenure)
+      .reduce((sum, emi) => sum + emi.monthlyAmount, 0);
+  }, [state.emis]);
+
   const totalLenaHai = useMemo(() => state.debts.filter(d => d.type === DebtType.TO_COLLECT).reduce((sum, d) => sum + d.amount, 0), [state.debts]);
   const totalMerePass = useMemo(() => state.accounts.filter(a => !a.isLiability).reduce((sum, a) => sum + a.balance, 0), [state.accounts]);
   const totalIncome = useMemo(() => state.transactions.filter(t => t.type === TransactionType.INCOME).reduce((sum, t) => sum + t.amount, 0), [state.transactions]);
@@ -171,17 +179,38 @@ const App: React.FC = () => {
           <StatMiniCard title="Mere Pass" value={totalMerePass} icon={<Wallet size={16} />} color="text-blue-600" />
           <StatMiniCard title="Lena Hai" value={totalLenaHai} icon={<ArrowUpRight size={16} />} color="text-emerald-600" />
           <StatMiniCard title="Barna Hai" value={totalBarnaHai} icon={<ArrowDownLeft size={16} />} color="text-rose-600" />
-          <StatMiniCard title="Income" value={totalIncome} icon={<TrendingUp size={16} />} color="text-indigo-600" />
+          <StatMiniCard title="Monthly EMI" value={totalMonthlyEMI} icon={<CalendarDays size={16} />} color="text-amber-600" />
         </div>
 
         <div className="space-y-8 pb-20">
           {activeTab === 'dashboard' && <Dashboard state={state} addTransaction={addTransaction} setActiveTab={setActiveTab} totals={{ barna: totalBarnaHai, lena: totalLenaHai, pass: totalMerePass, income: totalIncome }} />}
           {activeTab === 'accounts' && <Wallets accounts={state.accounts} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} />}
           {activeTab === 'cards' && <CreditCards accounts={state.accounts} emis={state.emis} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount} addEMI={addEMI} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
+          {activeTab === 'emis' && <EMIPlanner accounts={state.accounts} emis={state.emis} updateEMI={updateEMI} deleteEMI={deleteEMI} />}
           {activeTab === 'transactions' && <Transactions transactions={state.transactions} accounts={state.accounts} addTransaction={addTransaction} />}
           {activeTab === 'debts' && <Debts debts={state.debts} addDebt={(d) => {}} settleDebt={(id) => {}} />}
         </div>
       </main>
+      
+      {/* Mobile Nav update */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around p-3 md:hidden z-50 overflow-x-auto">
+        <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] ${activeTab === 'dashboard' ? 'text-rose-600 bg-rose-50' : 'text-slate-400'}`}>
+          <LayoutDashboard size={20} />
+          <span className="text-[9px] mt-1 font-black uppercase tracking-tighter">Home</span>
+        </button>
+        <button onClick={() => setActiveTab('emis')} className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] ${activeTab === 'emis' ? 'text-amber-600 bg-amber-50' : 'text-slate-400'}`}>
+          <CalendarDays size={20} />
+          <span className="text-[9px] mt-1 font-black uppercase tracking-tighter">EMIs</span>
+        </button>
+        <button onClick={() => setActiveTab('cards')} className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] ${activeTab === 'cards' ? 'text-rose-600 bg-rose-50' : 'text-slate-400'}`}>
+          <CreditCardIcon size={20} />
+          <span className="text-[9px] mt-1 font-black uppercase tracking-tighter">Cards</span>
+        </button>
+        <button onClick={() => setActiveTab('transactions')} className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] ${activeTab === 'transactions' ? 'text-rose-600 bg-rose-50' : 'text-slate-400'}`}>
+          <History size={20} />
+          <span className="text-[9px] mt-1 font-black uppercase tracking-tighter">Logs</span>
+        </button>
+      </nav>
     </div>
   );
 };
