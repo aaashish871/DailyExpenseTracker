@@ -1,0 +1,5 @@
+{
+  "name": "ExpenseTracker",
+  "description": "A comprehensive personal finance manager to track bank accounts, digital wallets, cash on hand, and debts (lending/borrowing) with AI-powered financial insights.",
+  "requestFramePermissions": []
+}
