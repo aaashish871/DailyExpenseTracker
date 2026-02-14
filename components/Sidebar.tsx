@@ -15,10 +15,10 @@ import {
   LogOut,
   User as UserIcon
 } from 'lucide-react';
-import { User } from '../types';
+import { User } from '../types.ts';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'accounts' | 'transactions' | 'debts' | 'insights' | 'prompt';
+  activeTab: 'dashboard' | 'accounts' | 'cards' | 'transactions' | 'debts' | 'insights' | 'prompt';
   setActiveTab: (tab: any) => void;
   onReset?: () => void;
   user: User;
@@ -40,9 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
   };
 
   useEffect(() => {
-    if (showConfirm) {
-      generateCaptcha();
-    }
+    if (showConfirm) generateCaptcha();
   }, [showConfirm]);
 
   useEffect(() => {
@@ -51,9 +49,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
 
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-    { id: 'accounts', label: 'Initial Setup', icon: Wallet },
+    { id: 'cards', label: 'My Cards', icon: CreditCard },
     { id: 'transactions', label: 'Kharch Logs', icon: History },
     { id: 'debts', label: 'Lena / Dena', icon: Users },
+    { id: 'accounts', label: 'App Setup', icon: Wallet },
     { id: 'insights', label: 'AI Insights', icon: BrainCircuit },
     { id: 'prompt', label: 'App Prompt', icon: Code2, adminOnly: true },
   ].filter(item => !item.adminOnly || user.role === 'admin');
@@ -67,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
 
   return (
     <>
-      <aside className="hidden md:flex flex-col w-72 bg-slate-900 text-slate-300 min-h-screen p-8">
+      <aside className="hidden md:flex flex-col w-72 bg-slate-900 text-slate-300 min-h-screen p-8 sticky top-0">
         <div className="flex items-center gap-4 mb-12 px-2">
           <div className="bg-rose-600 p-2.5 rounded-2xl shadow-lg shadow-rose-900/50">
             <CreditCard className="text-white" size={24} />
@@ -106,11 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
                 <p className="text-xs font-bold text-white truncate">{user.name}</p>
                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{user.role}</p>
               </div>
-              <button 
-                onClick={onLogout}
-                className="p-2 text-slate-500 hover:text-rose-500 transition-colors"
-                title="Logout"
-              >
+              <button onClick={onLogout} className="p-2 text-slate-500 hover:text-rose-500 transition-colors">
                 <LogOut size={18} />
               </button>
             </div>
@@ -123,23 +118,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
               <span className="font-black uppercase text-[10px] tracking-widest">Master Reset</span>
             </button>
           </div>
-          
-          <div className="bg-slate-800/50 rounded-3xl p-6 border border-slate-700/30">
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-3">Assistant Status</p>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-lg">
-                <BrainCircuit size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Gemini Pro</p>
-                <p className="text-[10px] text-slate-500 font-medium italic">Ready to Analyze</p>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 
-      {/* Robust UI-based Confirmation Dialog with CAPTCHA */}
       {showConfirm && (
         <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-6">
           <div className="bg-white rounded-[40px] w-full max-w-md p-10 text-center animate-in zoom-in duration-300 shadow-2xl border border-slate-100">
@@ -148,47 +129,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReset, use
             </div>
             <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Full Reset?</h2>
             <p className="text-slate-500 font-bold leading-relaxed mb-8 text-sm px-4">
-              This will wipe everything. Please verify you are human to proceed with data deletion.
+              This will wipe everything. Please solve the CAPTCHA to verify.
             </p>
-
             <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-8">
-               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Solve this Math CAPTCHA</label>
+               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Solve CAPTCHA</label>
                <div className="flex items-center justify-center gap-4">
                  <span className="text-xl font-black text-slate-900 tracking-tighter">{captcha.q} = ?</span>
-                 <input 
-                  type="number" 
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  placeholder="?"
-                  className="w-24 text-center bg-white border border-slate-200 py-3 rounded-xl text-xl font-black text-slate-900 focus:ring-2 focus:ring-rose-500 focus:outline-none placeholder-slate-300"
-                 />
+                 <input type="number" value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)} className="w-24 text-center bg-white border border-slate-200 py-3 rounded-xl text-xl font-black text-slate-900 focus:ring-2 focus:ring-rose-500 focus:outline-none" />
                </div>
-               {isValid && (
-                 <div className="mt-4 flex items-center justify-center gap-2 text-emerald-600 animate-in fade-in duration-300">
-                   <ShieldCheck size={14} />
-                   <span className="text-[10px] font-black uppercase tracking-widest">Verified Human</span>
-                 </div>
-               )}
             </div>
-
             <div className="space-y-4">
-              <button 
-                onClick={handleResetClick}
-                disabled={!isValid}
-                className={`w-full py-5 rounded-3xl font-black text-lg uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
-                  isValid 
-                  ? 'bg-rose-600 text-white hover:bg-rose-700' 
-                  : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
-                }`}
-              >
-                Yes, Clear Everything
-              </button>
-              <button 
-                onClick={() => setShowConfirm(false)}
-                className="w-full bg-slate-50 text-slate-500 py-5 rounded-3xl font-black text-lg uppercase tracking-widest hover:bg-slate-100 transition-all"
-              >
-                Cancel
-              </button>
+              <button onClick={handleResetClick} disabled={!isValid} className={`w-full py-5 rounded-3xl font-black text-lg uppercase tracking-widest transition-all ${isValid ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-xl' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}>Yes, Clear Everything</button>
+              <button onClick={() => setShowConfirm(false)} className="w-full bg-slate-50 text-slate-500 py-5 rounded-3xl font-black text-lg uppercase tracking-widest hover:bg-slate-100 transition-all">Cancel</button>
             </div>
           </div>
         </div>

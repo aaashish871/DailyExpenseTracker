@@ -25,7 +25,7 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  password?: string; // Only for local mock auth
+  password?: string;
 }
 
 export interface Account {
@@ -35,6 +35,18 @@ export interface Account {
   balance: number;
   isLiability: boolean;
   lastFourDigits?: string;
+}
+
+export interface EMI {
+  id: string;
+  accountId: string;
+  itemName: string;
+  totalAmount: number;
+  monthlyAmount: number;
+  processingFee: number;
+  tenure: number;
+  paidMonths: number;
+  startDate: string;
 }
 
 export interface Transaction {
@@ -59,4 +71,5 @@ export interface AppState {
   accounts: Account[];
   transactions: Transaction[];
   debts: Debt[];
+  emis: EMI[];
 }
