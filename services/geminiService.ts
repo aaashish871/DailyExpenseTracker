@@ -1,10 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppState, Account, AccountType } from "../types";
+import { AppState, Account, AccountType } from "../types.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Ensure we don't crash if the API key is not yet available
+const apiKey = process.env.API_KEY || "";
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const getFinancialInsights = async (state: AppState) => {
+  if (!ai) return [{ title: "AI Disabled", description: "API Key is missing." }];
+
   const prompt = `
     Analyze the following financial data and provide 3-4 concise insights or advice.
     Accounts: ${JSON.stringify(state.accounts)}
@@ -41,6 +45,8 @@ export const getFinancialInsights = async (state: AppState) => {
 };
 
 export const parseFinancialSetup = async (userInput: string): Promise<Partial<Account>[]> => {
+  if (!ai) return [];
+
   const prompt = `
     Extract bank accounts, wallets, or credit cards from this text: "${userInput}"
     Rules:

@@ -21,16 +21,16 @@ import {
   LogOut,
   Loader2
 } from 'lucide-react';
-import { AppState, Account, Transaction, Debt, AccountType, TransactionType, DebtType, User } from './types';
-import Dashboard from './components/Dashboard';
-import Wallets from './components/Wallets';
-import Transactions from './components/Transactions';
-import Debts from './components/Debts';
-import Sidebar from './components/Sidebar';
-import FinancialInsights from './components/FinancialInsights';
-import PromptView from './components/PromptView';
-import Login from './components/Login';
-import { supabase } from './services/supabaseClient';
+import { AppState, Account, Transaction, Debt, AccountType, TransactionType, DebtType, User } from './types.ts';
+import Dashboard from './components/Dashboard.tsx';
+import Wallets from './components/Wallets.tsx';
+import Transactions from './components/Transactions.tsx';
+import Debts from './components/Debts.tsx';
+import Sidebar from './components/Sidebar.tsx';
+import FinancialInsights from './components/FinancialInsights.tsx';
+import PromptView from './components/PromptView.tsx';
+import Login from './components/Login.tsx';
+import { supabase } from './services/supabaseClient.ts';
 
 const INITIAL_STATE: AppState = {
   accounts: [],
@@ -40,15 +40,19 @@ const INITIAL_STATE: AppState = {
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('expense_tracker_session');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('expense_tracker_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Failed to parse session", e);
+      return null;
+    }
   });
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'accounts' | 'transactions' | 'debts' | 'insights' | 'prompt'>('dashboard');
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch data from Supabase on login or mount
   useEffect(() => {
     if (currentUser) {
       loadData();
@@ -76,7 +80,7 @@ const App: React.FC = () => {
         .eq('user_id', currentUser.id);
 
       if (accError || txError || dError) {
-        console.error("Supabase load error:", { accError, txError, dError });
+        console.warn("Supabase load error (likely table missing):", { accError, txError, dError });
       }
 
       setState({
@@ -113,7 +117,6 @@ const App: React.FC = () => {
       if (error) throw error;
       const newTx = data[0];
 
-      // Update local state and account balances
       setState(prev => {
         const updatedAccounts = prev.accounts.map(acc => {
           if (acc.id === tx.accountId) {
@@ -132,7 +135,6 @@ const App: React.FC = () => {
         return { ...prev, accounts: updatedAccounts, transactions: [newTx, ...prev.transactions] };
       });
 
-      // Special handling for Refundable categories
       if (tx.type === TransactionType.EXPENSE && (tx.category === 'Home (Refundable)' || tx.category === 'Work (Refundable)')) {
         const newDebt = {
           person: tx.category.includes('Home') ? 'Home Refund' : 'Work Refund',
@@ -144,7 +146,7 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to add transaction:", err);
-      alert("Error saving transaction to Live Server.");
+      alert("Error saving transaction. Check Supabase connection.");
     }
   };
 
